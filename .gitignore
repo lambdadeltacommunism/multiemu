@@ -1,0 +1,5 @@
+/target
+/roms
+/perf*
+flamegraph.svg
+sync.sh
