@@ -35,8 +35,22 @@ pub fn run(user_specified_roms: Vec<RomId>, global_config: Arc<RwLock<GlobalConf
     let game_system = rom_manager.rom_information[&user_specified_roms[0]].system;
 
     if global_config.read().unwrap().hardware_acceleration {
-        launch_gui::<VulkanRendering>(rom_manager, InitialGuiState::MainMenu, global_config);
+        launch_gui::<VulkanRendering>(
+            rom_manager,
+            InitialGuiState::OpenGame {
+                user_specified_roms,
+                game_system,
+            },
+            global_config,
+        );
     } else {
-        launch_gui::<SoftwareRendering>(rom_manager, InitialGuiState::MainMenu, global_config);
+        launch_gui::<SoftwareRendering>(
+            rom_manager,
+            InitialGuiState::OpenGame {
+                user_specified_roms,
+                game_system,
+            },
+            global_config,
+        );
     }
 }

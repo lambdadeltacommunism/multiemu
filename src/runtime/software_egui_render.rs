@@ -1,10 +1,16 @@
-use super::EguiVertex;
 use arrayvec::ArrayVec;
 use egui::FullOutput;
 use egui::TextureId;
 use nalgebra::{DMatrix, DMatrixViewMut, Point2, Vector2, Vector3};
 use palette::{blend::Compose, LinSrgba, Srgba};
 use std::collections::HashMap;
+
+#[derive(Copy, Clone, Debug)]
+struct EguiVertex {
+    pos: Point2<f32>,
+    uv: Point2<f32>,
+    color: Srgba<u8>,
+}
 
 #[derive(Debug, Default)]
 pub struct SoftwareEguiRenderer {

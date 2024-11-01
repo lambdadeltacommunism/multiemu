@@ -95,8 +95,22 @@ pub fn run(
     let game_system = game_system.expect("Failed to guess game system");
 
     if global_config.read().unwrap().hardware_acceleration {
-        launch_gui::<VulkanRendering>(rom_manager, InitialGuiState::MainMenu, global_config);
+        launch_gui::<VulkanRendering>(
+            rom_manager,
+            InitialGuiState::OpenGame {
+                user_specified_roms,
+                game_system,
+            },
+            global_config,
+        );
     } else {
-        launch_gui::<SoftwareRendering>(rom_manager, InitialGuiState::MainMenu, global_config);
+        launch_gui::<SoftwareRendering>(
+            rom_manager,
+            InitialGuiState::OpenGame {
+                user_specified_roms,
+                game_system,
+            },
+            global_config,
+        );
     }
 }

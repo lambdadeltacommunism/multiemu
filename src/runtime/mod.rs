@@ -10,10 +10,7 @@ use crate::{
     component::display::DisplayComponent,
     rom::{GameSystem, RomId},
 };
-use bytemuck::{Pod, Zeroable};
 use egui::FullOutput;
-use nalgebra::Point2;
-use palette::Srgba;
 use std::sync::{Arc, Mutex};
 
 #[cfg(desktop)]
@@ -35,17 +32,21 @@ pub trait RenderingBackend {
     type RuntimeState: RenderingBackendState<RenderingBackend = Self>;
 }
 
+#[allow(clippy::large_enum_variant)]
+pub enum RedrawKind<'a, R: RenderingBackend> {
+    Machine(&'a [Arc<Mutex<dyn DisplayComponent<R>>>]),
+    Egui {
+        context: &'a egui::Context,
+        full_output: FullOutput,
+    },
+}
+
 pub trait RenderingBackendState: Sized {
     type RenderingBackend: RenderingBackend;
 
-    fn redraw_egui(&mut self, context: &egui::Context, full_output: FullOutput);
-
     fn surface_resized(&mut self);
 
-    fn redraw(
-        &mut self,
-        display_components: &[Arc<Mutex<dyn DisplayComponent<Self::RenderingBackend>>>],
-    );
+    fn redraw(&mut self, kind: RedrawKind<Self::RenderingBackend>);
 
     fn initialize_components(
         &mut self,
@@ -65,12 +66,4 @@ pub enum InitialGuiState {
 enum RuntimeState {
     Menu,
     PlayingGame,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-struct EguiVertex {
-    pos: Point2<f32>,
-    uv: Point2<f32>,
-    color: Srgba<u8>,
 }

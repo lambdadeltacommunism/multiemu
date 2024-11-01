@@ -3,9 +3,8 @@ use crate::{
     component::display::DisplayComponent,
     config::GlobalConfig,
     machine::executor::Executor,
-    runtime::{RenderingBackend, RenderingBackendState},
+    runtime::{RedrawKind, RenderingBackend, RenderingBackendState},
 };
-use egui::FullOutput;
 use egui_render::EguiRenderer;
 use nalgebra::Vector2;
 use std::sync::{Arc, Mutex, RwLock};
@@ -32,6 +31,7 @@ use vulkano::{
 };
 use winit::window::Window;
 
+mod shader;
 mod egui_render;
 
 pub struct VulkanState {
@@ -49,7 +49,7 @@ pub struct VulkanState {
     swapchain_images: Vec<Arc<Image>>,
     recreate_swapchain: bool,
     window: Arc<Window>,
-    egui_renderer: EguiRenderer,
+    egui_renderer_state: EguiRenderer,
     global_config: Arc<RwLock<GlobalConfig>>,
 }
 
@@ -60,10 +60,7 @@ impl RenderingBackendState for VulkanState {
         self.recreate_swapchain = true;
     }
 
-    fn redraw(
-        &mut self,
-        display_components: &[Arc<Mutex<dyn DisplayComponent<Self::RenderingBackend>>>],
-    ) {
+    fn redraw(&mut self, kind: RedrawKind<VulkanRendering>) {
         let window_size = Vector2::new(
             self.window.inner_size().width,
             self.window.inner_size().height,
@@ -125,18 +122,28 @@ impl RenderingBackendState for VulkanState {
         )
         .unwrap();
 
-        let display_component_guard = display_components[0].lock().unwrap();
-        let display_component_buffer = display_component_guard.display_data();
+        match kind {
+            RedrawKind::Machine(display_components) => {
+                let display_component_guard = display_components[0].lock().unwrap();
+                let display_component_buffer = display_component_guard.display_data();
 
-        command_buffer
-            .blit_image(BlitImageInfo {
-                src_image_layout: ImageLayout::TransferSrcOptimal,
-                dst_image_layout: ImageLayout::TransferDstOptimal,
-                filter: Filter::Nearest,
-                ..BlitImageInfo::images(display_component_buffer.clone(), swapchain_image.clone())
-            })
-            .unwrap();
-        drop(display_component_guard);
+                command_buffer
+                    .blit_image(BlitImageInfo {
+                        src_image_layout: ImageLayout::TransferSrcOptimal,
+                        dst_image_layout: ImageLayout::TransferDstOptimal,
+                        filter: Filter::Nearest,
+                        ..BlitImageInfo::images(
+                            display_component_buffer.clone(),
+                            swapchain_image.clone(),
+                        )
+                    })
+                    .unwrap();
+            }
+            RedrawKind::Egui {
+                context,
+                full_output,
+            } => {}
+        }
 
         let command_buffer = command_buffer.build().unwrap();
 
@@ -183,10 +190,6 @@ impl RenderingBackendState for VulkanState {
                     command_buffer_allocator: self.command_buffer_allocator.clone(),
                 });
         }
-    }
-
-    fn redraw_egui(&mut self, context: &egui::Context, output: FullOutput) {
-        self.egui_renderer.redraw_egui(context, output);
     }
 }
 
@@ -340,9 +343,10 @@ impl WinitRenderBackendState for VulkanState {
             .collect();
 
         Self {
-            egui_renderer: EguiRenderer::new(
+            egui_renderer_state: EguiRenderer::new(
                 window.clone(),
                 device.clone(),
+                gui_queue.clone(),
                 memory_allocator.clone(),
             ),
             previous_frame_future: Some(vulkano::sync::now(device.clone()).boxed()),

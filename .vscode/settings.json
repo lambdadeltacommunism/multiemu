@@ -12,6 +12,7 @@
     "inactive_settings": {
         "rust-analyzer.check.overrideCommand": [
             "cargo",
+            "+nightly",
             "3ds",
             "clippy",
             "--message-format=json-diagnostic-rendered-ansi",

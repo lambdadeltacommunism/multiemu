@@ -12,10 +12,13 @@ use std::{
     str::FromStr,
 };
 use std::{fmt::Display, path::Path};
+use strum::{EnumIter, IntoEnumIterator};
 
 pub mod guess_rom;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter,
+)]
 pub enum NintendoSystem {
     GameBoy,
     GameBoyColor,
@@ -26,14 +29,18 @@ pub enum NintendoSystem {
     Nintendo64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter,
+)]
 pub enum SegaSystem {
     MasterSystem,
     GameGear,
     Genesis,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter,
+)]
 pub enum SonySystem {
     Playstation,
     Playstation2,
@@ -42,13 +49,17 @@ pub enum SonySystem {
     PlaystationVita,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter,
+)]
 pub enum OtherSystem {
     Chip8,
     SuperChip8,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter,
+)]
 pub enum AtariSystem {
     Atari2600,
 }
@@ -69,6 +80,17 @@ pub enum GameSystem {
     Other(OtherSystem),
     #[default]
     Unknown,
+}
+
+impl GameSystem {
+    pub fn iter() -> impl Iterator<Item = GameSystem> {
+        NintendoSystem::iter()
+            .map(GameSystem::Nintendo)
+            .chain(SegaSystem::iter().map(GameSystem::Sega))
+            .chain(SonySystem::iter().map(GameSystem::Sony))
+            .chain(AtariSystem::iter().map(GameSystem::Atari))
+            .chain(OtherSystem::iter().map(GameSystem::Other))
+    }
 }
 
 impl FromStr for GameSystem {

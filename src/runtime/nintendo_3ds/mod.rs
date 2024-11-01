@@ -74,7 +74,7 @@ where
             };
 
             let full_output = self.egui_context.run(input, |context| {
-                self.gui_state.main_menu_logic(context);
+                self.gui_state.run_menu(context);
             });
 
             //console.flush_buffers();

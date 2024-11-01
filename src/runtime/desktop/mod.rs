@@ -1,8 +1,10 @@
-use super::{timing::FramerateTracker, InitialGuiState, RenderingBackend, RenderingBackendState};
+use super::{
+    timing::FramerateTracker, InitialGuiState, RedrawKind, RenderingBackend, RenderingBackendState,
+};
 use crate::{
     component::{definitions::chip8::display::Chip8Display, display::DisplayComponent},
     config::GlobalConfig,
-    gui::GuiRuntime,
+    gui::{GuiRuntime, UiOutput},
     input::InputState,
     machine::{
         definitions::construct_machine,
@@ -167,6 +169,7 @@ where
 
                 let executor = E::new(machine.tasks, machine.memory_translation_table.clone());
 
+                self.gui_state.active = false;
                 self.machine_context_state = Some(MachineContextState::Running {
                     machine_context: MachineContext {
                         executor,
@@ -259,17 +262,30 @@ where
             }
             WindowEvent::RedrawRequested => {
                 if is_gui_active {
+                    // Grabbing the ui output is a little unpleasant here
+                    let mut ui_output = None;
                     let full_output = self.egui_context.run(
                         window_context
                             .egui_winit_context
                             .take_egui_input(&window_context.window),
                         |context| {
-                            self.gui_state.main_menu_logic(context);
+                            ui_output = ui_output.take().or(self.gui_state.run_menu(context));
                         },
                     );
+
+                    match ui_output {
+                        Some(UiOutput::OpenGame { path }) => {
+                            tracing::info!("Opening {} by order of the gui", path.display());
+                        }
+                        None => {}
+                    }
+
                     window_context
                         .display_backend_state
-                        .redraw_egui(&self.egui_context, full_output);
+                        .redraw(RedrawKind::Egui {
+                            context: &self.egui_context,
+                            full_output,
+                        });
                 } else {
                     let Some(MachineContextState::Running { machine_context }) =
                         self.machine_context_state.as_mut()
@@ -280,7 +296,7 @@ where
                     self.framerate_tracker.record_frame();
                     window_context
                         .display_backend_state
-                        .redraw(&machine_context.display_components);
+                        .redraw(RedrawKind::Machine(&machine_context.display_components));
                     machine_context
                         .executor
                         .run(self.framerate_tracker.average_framerate());
